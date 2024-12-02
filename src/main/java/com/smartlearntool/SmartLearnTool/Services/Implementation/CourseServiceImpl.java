@@ -1,18 +1,27 @@
 package com.smartlearntool.SmartLearnTool.Services.Implementation;
 
+import com.smartlearntool.SmartLearnTool.Config.AppConstant;
 import com.smartlearntool.SmartLearnTool.Repositories.CourseRepo;
 import com.smartlearntool.SmartLearnTool.Services.CategoryService;
 import com.smartlearntool.SmartLearnTool.Services.CourseService;
-import com.smartlearntool.SmartLearnTool.dtos.CategoryDto;
+import com.smartlearntool.SmartLearnTool.Services.FileService;
 import com.smartlearntool.SmartLearnTool.dtos.CourseDto;
+import com.smartlearntool.SmartLearnTool.dtos.ResourceContentType;
 import com.smartlearntool.SmartLearnTool.entities.Course;
 import com.smartlearntool.SmartLearnTool.exceptions.ResourseNotFoundException;
 import org.modelmapper.ModelMapper;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.core.io.FileSystemResource;
+import org.springframework.core.io.Resource;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -31,6 +40,9 @@ public class CourseServiceImpl implements CourseService
     private CourseRepo courseRepo;
     private ModelMapper modelMapper;
     private CategoryService categoryService;
+
+    @Autowired
+    private FileService fileService;
     
 
 
@@ -93,5 +105,31 @@ public class CourseServiceImpl implements CourseService
         return courses.stream()
                 .map(course->modelMapper.map(course, CourseDto.class))
                 .collect(Collectors.toList());
+    }
+
+    @Override
+    public CourseDto saveBanner(MultipartFile file, String courseId) throws IOException {
+        Course course = courseRepo.findById(courseId).orElseThrow(() -> new ResourseNotFoundException("Course Not Found"));
+        String filePath = fileService.save(file, AppConstant.COURSE_BANNER_UPLOAD_DIR, file.getOriginalFilename());
+        course.setBanner(filePath);
+        course.setBannerContentType(file.getContentType());
+
+        return modelMapper.map(courseRepo.save(course),CourseDto.class);
+    }
+
+    @Override
+    public ResourceContentType getCourseBannerById(String courseId) {
+        Course course = courseRepo.findById(courseId).orElseThrow(() -> new ResourseNotFoundException("Course Not Found"));
+
+        String bannerPath = course.getBanner();
+        Path path = Paths.get(bannerPath);
+        System.out.println(path);
+        Resource resource = new FileSystemResource(path);
+        ResourceContentType resourceContentType = new ResourceContentType();
+        resourceContentType.setResource(resource);
+
+        resourceContentType.setContentType(course.getBannerContentType());
+        System.out.println(resourceContentType.getContentType());
+        return resourceContentType;
     }
 }

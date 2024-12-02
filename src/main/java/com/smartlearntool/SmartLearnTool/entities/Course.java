@@ -31,6 +31,7 @@ public class Course {
     private Date createdDate;
 
     private String banner;
+    private String bannerContentType;
 
 //    @OneToMany(mappedBy = "course", cascade = CascadeType.ALL)
 //    private List<Video> videos = new ArrayList<>();
